@@ -31,9 +31,7 @@ const io = new Server(server, {
   pingTimeout: 10000,
 });
 
-// 🔥 FIXED: Ambil PORT dengan fallback
-const port = process.env.PORT || process.env.PORT_NODE || 3000;
-
+const port = process.env.PORT_NODE;
 wa.setSocketIO(io);
 
 app.use((req, res, next) => {
