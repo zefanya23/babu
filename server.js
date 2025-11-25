@@ -2,20 +2,20 @@
 
 const wa = require("./server/whatsapp");
 const fs = require("fs");
-const dbs = require("./server/database/index");
-const specs = require("./server/lib/specs");
+const dbs = require('./server/database/index');
+const specs = require('./server/lib/specs');
 require("dotenv").config();
 const lib = require("./server/lib");
-const chat = require("./server/chat");
+const chat = require("./server/chat")
 global.log = lib.log;
 
 /**
  * EXPRESS FOR ROUTING
  */
 const serverOptions = {
-  key: fs.readFileSync("key.pem"),
-  cert: fs.readFileSync("cert.pem"),
-};
+  key: fs.readFileSync('key.pem'),
+  cert: fs.readFileSync('cert.pem')
+}
 
 const express = require("express");
 const app = express();
@@ -31,7 +31,7 @@ const io = new Server(server, {
   pingTimeout: 10000,
 });
 
-// ➜ PENTING: pakai PORT dari Railway dulu, baru fallback ke PORT_NODE/3000
+// 🔥 FIXED: Ambil PORT dengan fallback
 const port = process.env.PORT || process.env.PORT_NODE || 3000;
 
 wa.setSocketIO(io);
@@ -58,52 +58,29 @@ app.use(require("./server/router"));
 
 chat.setIO(io);
 
-io.on("connection", (socket) => {
-  console.log("A user connected");
-
-  socket.on("specs", () => {
-    specs.init(socket);
-  });
-
-  socket.on("StartConnection", (data) => wa.connectToWhatsApp(data, io));
-
-  socket.on("ConnectViaCode", (data) =>
-    wa.connectToWhatsApp(data, io, true)
-  );
-
-  socket.on("LogoutDevice", (device) => wa.deleteCredentials(device, io));
-
-  socket.on("disconnect", () =>
-    console.log("A user disconnected:", socket.id)
-  );
+io.on('connection', socket => {
+	console.log("A user connected");
+	socket.on('specs', () => {
+		specs.init(socket);
+	});
+	socket.on('StartConnection', data => wa.connectToWhatsApp(data, io));
+	socket.on('ConnectViaCode', data => wa.connectToWhatsApp(data, io, true));
+	socket.on('LogoutDevice', device => wa.deleteCredentials(device, io));
+	socket.on('disconnect', () => console.log('A user disconnected:', socket.id));
 });
 
 server.listen(port, () => {
-  console.log(`Server running and listening on port: ${port}`);
+    console.log(`Server running and listening on port: ${port}`);
 });
 
-/**
- * AUTO RECONNECT KE DEVICE YANG STATUSNYA 'Connected'
- * Dibikin aman supaya kalau DB error / results kosong, server nggak crash
- */
-dbs.db.query(
-  "SELECT * FROM devices WHERE status = 'Connected'",
-  (err, results) => {
-    if (err) {
-      console.error("Error executing query:", err);
-      return; // jangan lanjut kalau query error
-    }
-
-    if (!results || !Array.isArray(results) || results.length === 0) {
-      console.log("No connected devices found");
-      return;
-    }
-
-    results.forEach((row) => {
-      const number = row.body;
-      if (/^\d+$/.test(number)) {
-        wa.connectToWhatsApp(number);
-      }
-    });
+dbs.db.query("SELECT * FROM devices WHERE status = 'Connected'", (err, results) => {
+  if (err) {
+    console.error('Error executing query:', err);
   }
-);
+  results.forEach(row => {
+    const number = row.body;
+    if (/^\d+$/.test(number)) {
+      wa.connectToWhatsApp(number);
+    }
+  });
+});
